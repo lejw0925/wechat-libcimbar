@@ -1,1 +1,2 @@
-<view class="page"><view class="section-title">开源组件与许可</view><view class="note">本项目使用 libcimbar、OpenCV 等开源组件实现解码。感谢原作者与贡献者。源码与构建说明可通过下方 GitHub 链接获取。</view><open-source-footer /><text class="license-text" selectable>{{text}}</text></view>
+<view class="page-background" aria-hidden="true"></view>
+<view class="page"><view class="note">解码基于 libcimbar、OpenCV 等开源组件。源码与构建说明可从 GitHub 获取。</view><open-source-footer /><text class="license-text" selectable>{{text}}</text></view>

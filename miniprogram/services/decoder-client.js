@@ -1,5 +1,5 @@
 class DecoderClient {
-  constructor(api, onFrame, onFatal) {
+  constructor(api, onFrame, onFatal, now = Date.now) {
     this.api = api;
     this.onFrame = onFrame;
     this.onFatal = onFatal;
@@ -10,6 +10,7 @@ class DecoderClient {
     this.closed = false;
     this.directCamera = false;
     this.lastMetrics = null;
+    this.now = now;
   }
   async start(mode) {
     let platform;
@@ -67,25 +68,44 @@ class DecoderClient {
     if (message.type === 'error') pending.reject(new Error(message.message));
     else pending.resolve(message);
   }
-  pushFrame(frame, onSettled) { return this.submitFrame('frame', { frame }, onSettled); }
+  pushFrame(frame, onSettled, sourceMetrics) { return this.submitFrame('frame', { frame }, onSettled, sourceMetrics); }
   pullCameraFrame(width, height, onSettled) {
     return this.submitFrame('camera-frame', { width, height }, onSettled);
   }
-  submitFrame(type, payload, onSettled) {
+  submitFrame(type, payload, onSettled, sourceMetrics) {
     if (this.closed || !this.ready || this.busy) return false;
+    if (this.samplingPaused) this.lastFrameAt = undefined;
+    this.samplingPaused = false;
+    const startedAt = this.now();
+    const postBytes = type === 'frame' ? payload.frame.data.byteLength : 0;
+    let frameMetrics = null;
     this.busy = true;
     this.request(type, payload).then(message => {
       if (this.closed) return;
       if (message.directUnavailable) this.directCamera = false;
-      if (message.metrics) this.lastMetrics = message.metrics;
+      if (message.metrics) {
+        const finishedAt = this.now();
+        const metrics = Object.assign({ postBytes,
+          cropMs: 0, cropBufferBytes: 0 }, message.metrics, sourceMetrics,
+        { roundTripMs: Math.max(0, finishedAt - startedAt) });
+        if (Number.isFinite(message.elapsed)) metrics.workerElapsedMs = Math.max(0, message.elapsed);
+        if (!this.samplingPaused) {
+          if (this.lastFrameAt !== undefined && finishedAt > this.lastFrameAt) metrics.frameIntervalMs = finishedAt - this.lastFrameAt;
+          this.lastFrameAt = finishedAt;
+        }
+        this.lastMetrics = metrics;
+        frameMetrics = metrics;
+      }
       if (message.result) this.onFrame(message.result, message.elapsed);
     }).catch(error => this.fatal(error)).finally(() => {
       this.busy = false;
-      if (!this.closed && onSettled) onSettled();
+      if (!this.closed && onSettled) onSettled(frameMetrics);
     });
     return true;
   }
   releaseFrameBuffer() {
+    this.samplingPaused = true;
+    this.lastFrameAt = undefined;
     if (this.closed || !this.ready) return;
     // Queued after any in-flight decode; never resets the received file packets.
     this.request('release-frame', {}).catch(error => this.fatal(error));

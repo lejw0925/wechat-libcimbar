@@ -1,10 +1,10 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { CameraSource, FRAME_INTERVAL } = require('../miniprogram/services/camera-source');
+const { CameraSource, FRAME_INTERVAL, BUSY_RETRY_MS } = require('../miniprogram/services/camera-source');
 
 function harness(direct = false) {
   let now = 0, sequence = 0, callback, settled, enabled = false;
-  const timers = new Map(), starts = [], stops = [], submissions = [];
+  const timers = new Map(), starts = [], stops = [], submissions = [], sourceMetrics = [];
   const timing = {
     now: () => now,
     setTimeout(fn, delay) { const id = ++sequence; timers.set(id, { fn, at: now + delay }); return id; },
@@ -17,10 +17,10 @@ function harness(direct = false) {
   const camera = { onCameraFrame(fn) { callback = fn; return listener; } };
   const client = {
     busy: false, directCamera: direct, worker: {},
-    pushFrame(frame, done) {
+    pushFrame(frame, done, metrics) {
       assert.equal(enabled, false, 'native frame delivery must be stopped before copying');
       assert.equal(this.busy, false);
-      this.busy = true; submissions.push(frame); settled = done; return true;
+      this.busy = true; submissions.push(frame); sourceMetrics.push(metrics); settled = done; return true;
     },
     pullCameraFrame(width, height, done) {
       assert.equal(this.busy, false);
@@ -29,9 +29,10 @@ function harness(direct = false) {
   };
   const errors = [];
   const source = new CameraSource(camera, client, error => errors.push(error), timing);
-  return { source, client, listener, starts, stops, submissions, timers, errors,
-    frame() { callback({ width: 1024, height: 1024, data: new ArrayBuffer(1024 * 1024 * 4) }); },
-    settle() { client.busy = false; settled(); },
+  return { source, client, listener, starts, stops, submissions, sourceMetrics, timers, errors,
+    frame(frame = { width: 1024, height: 1024, data: new ArrayBuffer(1024 * 1024 * 4) }) { callback(frame); },
+    settle(metrics, elapsed = 0) { now += elapsed; client.busy = false; settled(metrics); },
+    advance(ms) { now += ms; },
     next() {
       const [id, task] = [...timers].sort((a, b) => a[1].at - b[1].at)[0];
       timers.delete(id); now = task.at; task.fn();
@@ -40,7 +41,7 @@ function harness(direct = false) {
   };
 }
 
-test('copied frames stop the native listener until decode completes, with a 4 fps ceiling', () => {
+test('copied frames stop the native listener until decode completes and start at 8 fps', () => {
   const h = harness();
   h.source.start();
   h.frame();
@@ -155,4 +156,58 @@ test('a late direct-bind success after timeout must not overwrite the fallback c
   h.frame();
   assert.ok(h.submissions.at(-1).data instanceof ArrayBuffer);
   h.source.stop();
+});
+
+test('busy copied and direct paths retry in 8ms instead of wasting a sampling period', () => {
+  for (const direct of [false, true]) {
+    const h = harness(direct);
+    if (direct) { h.source.start(); h.frame(); h.client.busy = true; h.next(); }
+    else { h.client.busy = true; h.source.start(); }
+    const before = h.now;
+    assert.equal(h.submissions.length, 0);
+    h.client.busy = false; h.next();
+    assert.equal(h.now - before, BUSY_RETRY_MS);
+    if (!direct) h.frame();
+    assert.equal(h.submissions.length, 1);
+    h.source.stop(); h.settle();
+    assert.equal(h.timers.size, 0);
+  }
+});
+
+test('copied camera acquisition time is included in the period and only square pixels are posted', () => {
+  const h = harness(), raw = { width: 720, height: 1280, data: new ArrayBuffer(720 * 1280 * 4) };
+  h.source.start(); h.advance(30); h.frame(raw);
+  const posted = h.submissions[0], before = posted.data.slice(0);
+  assert.equal(posted.width, 720); assert.equal(posted.height, 720);
+  assert.equal(posted.data.byteLength, 2073600);
+  assert.equal(h.sourceMetrics[0].height, 1280);
+  new Uint8Array(raw.data).fill(255);
+  h.frame(raw); assert.deepEqual(posted.data, before, 'busy input cannot overwrite staging pixels');
+  h.settle({ workerElapsedMs: 20, roundTripMs: 25 }, 25);
+  h.next();
+  assert.equal(h.now, FRAME_INTERVAL, 'camera wait must not be added again to the next interval');
+  h.frame(raw);
+  assert.equal(h.submissions[1].data, posted.data, 'reuse after settlement');
+  h.source.stop();
+  assert.equal(h.source.cropper.pixels, null);
+  h.settle(); assert.equal(h.timers.size, 0);
+});
+
+test('both camera transports adapt under load without creating a frame queue', () => {
+  const raw = { width: 64, height: 128, data: new ArrayBuffer(64 * 128 * 4) };
+  for (const direct of [false, true]) {
+    const h = harness(direct), stages = [h.source.sampling.fps];
+    h.source.start(); h.frame(raw);
+    if (direct) h.next();
+    for (let i = 0; i < 100; i++) {
+      assert.equal(h.timers.size, 0, 'no sampling timer while a frame is in flight');
+      h.settle({ workerElapsedMs: 20, roundTripMs: 25, frameIntervalMs: h.source.interval }, 25);
+      if (h.source.sampling.fps !== stages.at(-1)) stages.push(h.source.sampling.fps);
+      h.next(); if (!direct) h.frame(raw);
+    }
+    assert.deepEqual(stages, [8, 12, 20]);
+    h.settle({ workerElapsedMs: 100, roundTripMs: 110, frameIntervalMs: 110 }, 110);
+    assert.equal(h.source.sampling.fps, 12);
+    h.source.stop(); assert.equal(h.timers.size, 0);
+  }
 });

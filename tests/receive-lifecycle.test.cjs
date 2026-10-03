@@ -16,8 +16,7 @@ function pageInstance(api = {}, globals = {}) {
   const page = Object.assign({}, definition, {
     data: JSON.parse(JSON.stringify(definition.data)),
     setData(update) { Object.assign(this.data, update); },
-    _visible: true, _run: 1, _frames: 0, _lastUpdateAt: 0,
-    refreshPending() {}
+    _visible: true, _run: 1, _frames: 0, _lastUpdateAt: 0
   });
   return page;
 }
@@ -154,4 +153,20 @@ test('receive UI displays source and square dimensions while counting only decod
   assert.equal(page.data.decodeSizeLabel, '720×720');
   assert.deepEqual(seen, [157320]);
   assert.equal(page.data.progress, 15);
+});
+
+test('resuming after a memory warning caps the new camera at 4 fps and diagnostics preserve its target on pause', () => {
+  const snapshots = [];
+  const page = pageInstance({ createCameraContext: () => ({ onCameraFrame: () => ({ start() {}, stop() {} }) }) });
+  page._client = { ready: true, closed: false, busy: false, releaseFrameBuffer() {}, dispose() {} };
+  page._diagnostics = { record(info) { snapshots.push(info); } };
+  page.update({ phase: 'scanning' }); page.cameraReady();
+  assert.equal(page._source.sampling.fps, 8);
+  page.memoryWarning({}); page.resume(); page.cameraReady();
+  assert.equal(page._source.sampling.fps, 4);
+  assert.equal(page._source.sampling.metrics().samplingMaxFps, 4);
+  page.pause();
+  assert.equal(snapshots.at(-1).targetFps, 4);
+  assert.equal(snapshots.at(-1).targetFrameIntervalMs, 250);
+  page.onUnload();
 });

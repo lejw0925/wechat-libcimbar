@@ -1,0 +1,27 @@
+<wxs module="sheet" src="./motion.wxs" />
+<view class="history-root" motion="{{motion}}" change:motion="{{sheet.sync}}">
+  <view class="history-dim" style="opacity: {{expanded ? 1 : 0}}; pointer-events: {{expanded ? 'auto' : 'none'}};" catchtouchmove="{{sheet.block}}"></view>
+  <view class="history-panel" style="height: {{height}}px; transform: translate3d(0, {{expanded ? 0 : height - peek}}px, 0);">
+    <view class="history-handle" bindtouchstart="{{sheet.start}}" catchtouchmove="{{sheet.move}}" bindtouchend="{{sheet.end}}" bindtouchcancel="{{sheet.cancel}}" bindtap="{{sheet.tap}}" aria-role="button" aria-label="{{expanded ? '历史接收，向下滑动收起' : '历史接收，向上滑动展开'}}" aria-expanded="{{expanded}}">
+      <view class="history-grabber"></view>
+      <view class="history-heading"><text class="history-title">历史接收</text><text class="history-count">{{loading ? '' : files.length + ' 个文件'}}</text></view>
+    </view>
+    <scroll-view class="history-body" scroll-y="{{expanded}}" enhanced="{{true}}" bounces="{{false}}" show-scrollbar="{{false}}" bindscroll="{{sheet.scrolled}}" bindtouchstart="{{sheet.bodyStart}}" bindtouchmove="{{sheet.bodyMove}}" bindtouchend="{{sheet.bodyEnd}}" bindtouchcancel="{{sheet.bodyCancel}}" style="height: {{height - 76}}px; opacity: {{expanded ? 1 : .55}};" aria-hidden="{{!expanded}}">
+      <view wx:if="{{error}}" class="history-message history-error" bindtap="retry" aria-role="button" aria-label="重新读取历史接收">{{error}} · 点按重试</view>
+      <view wx:elif="{{loading}}" class="history-message">正在读取…</view>
+      <view wx:elif="{{files.length === 0}}" class="history-empty"><view>还没有接收文件</view><text>接收完成的文件会留在这里</text></view>
+      <block wx:else>
+        <view class="history-list">
+          <view class="history-file" wx:for="{{files}}" wx:key="id" data-id="{{item.id}}" bindtap="{{sheet.fileTap}}" hover-class="history-pressed" aria-role="button" aria-label="{{item.name + '，' + item.sizeLabel + (item.status === 'pending' ? '，待命名' : '')}}">
+            <view class="history-file-icon">{{item.extension}}</view>
+            <view class="history-file-details"><view class="history-file-name">{{item.name}}</view><view class="history-file-meta">{{item.sizeLabel}} · {{item.dateLabel}}<text wx:if="{{item.status === 'pending'}}" class="history-pending"> · 待命名</text></view></view>
+          </view>
+        </view>
+        <view class="history-footnote">共 {{totalSize}} · 点按文件可重命名、打开或导出</view>
+      </block>
+      <view class="history-safe-bottom"></view>
+    </scroll-view>
+    <view class="history-peek-fade" style="top: 76px; height: {{peek - 76}}px; opacity: {{expanded ? 0 : 1}};"></view>
+    <view wx:if="{{!expanded}}" class="history-peek-touch" style="height: {{peek - 76}}px;" bindtouchstart="{{sheet.start}}" catchtouchmove="{{sheet.move}}" bindtouchend="{{sheet.end}}" bindtouchcancel="{{sheet.cancel}}" bindtap="{{sheet.tap}}" aria-hidden="true"></view>
+  </view>
+</view>

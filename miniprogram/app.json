@@ -1,12 +1,17 @@
 {
-  "pages": ["pages/receive/index", "pages/files/index", "pages/licenses/index"],
+  "pages": ["pages/receive/index", "pages/more/index", "pages/licenses/index"],
   "usingComponents": { "open-source-footer": "/components/open-source-footer/index" },
   "window": {
-    "navigationBarTitleText": "CIMBAR · 文件接收",
-    "navigationBarBackgroundColor": "#f6f7f3",
-    "navigationBarTextStyle": "black",
-    "backgroundColor": "#f6f7f3"
+    "navigationBarTitleText": "CIMBAR",
+    "navigationBarBackgroundColor": "@navigationBackground",
+    "navigationBarTextStyle": "@navigationText",
+    "backgroundColor": "@background",
+    "backgroundTextStyle": "@backgroundText",
+    "backgroundColorTop": "@background",
+    "backgroundColorBottom": "@background"
   },
+  "darkmode": true,
+  "themeLocation": "theme.json",
   "workers": "workers",
   "permission": { "scope.camera": { "desc": "用于读取屏幕上的 cimbar 码并在本机还原文件" } },
   "style": "v2",

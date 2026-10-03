@@ -10,7 +10,8 @@
     "test": "node --test tests/*.test.cjs",
     "check": "node scripts/check.mjs",
     "test:wasm": "node scripts/test-wasm.mjs",
-    "test:memory": "node scripts/test-memory.mjs"
+    "test:memory": "node scripts/test-memory.mjs",
+    "bench:decoder": "node scripts/benchmark-decoder.mjs"
   },
   "engines": { "node": ">=22.15" }
 }

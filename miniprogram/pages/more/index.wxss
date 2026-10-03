@@ -1,0 +1,10 @@
+.mode-group { padding: 16px 12px 4px; }
+.mode-heading { padding: 0 4px; font-size: 17px; line-height: 24px; font-weight: 400; }
+.mode-heading .small { text-align: right; }
+.mode-slider { margin: 24px 10% 0; }
+.mode-stops { display: flex; }
+.mode-stop.mode-stop { box-sizing: border-box; width: 20%; margin: 0; min-height: 44px; padding: 10px 0; background: transparent; color: var(--muted); font-size: 13px; line-height: 24px; font-weight: 400; border-radius: 0; }
+.mode-stop.selected { color: var(--accent); font-weight: 600; }
+.help-text { border-top: .5px solid var(--separator); margin-left: 16px; padding: 4px 16px 16px 0; font-size: 13px; line-height: 1.55; color: var(--muted); }
+.help-text view { margin-top: 12px; }
+.help-note { padding-top: 12px; border-top: .5px solid var(--separator); }

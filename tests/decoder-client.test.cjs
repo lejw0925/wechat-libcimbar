@@ -104,3 +104,63 @@ test('stopping during experimental initialization must not create a fallback Wor
   assert.equal(creates, 1);
   assert.equal(terminated, 1);
 });
+
+test('diagnostics separate Worker round trip, decode cost and frame cadence without counting paused time', async () => {
+  let now = 0, listener, pendingFrame;
+  const fake = { onMessage(fn) { listener = fn; }, terminate() {}, postMessage(message) {
+    if (message.type === 'init') queueMicrotask(() => listener({ id: message.id, type: 'ready' }));
+    else if (message.type === 'release-frame') queueMicrotask(() => listener({ id: message.id, type: 'released' }));
+    else pendingFrame = message;
+  } };
+  const client = new DecoderClient({ createWorker: () => fake }, () => {}, error => assert.fail(error), () => now);
+  await client.start(68);
+  const reply = async (at, elapsed) => {
+    now = at;
+    listener({ id: pendingFrame.id, type: 'frame', result: { progress: 15 }, elapsed, metrics: { heapBytes: 33554432 } });
+    await tick();
+  };
+  client.pullCameraFrame(720, 1280); await reply(45, 30);
+  assert.equal(client.lastMetrics.roundTripMs, 45);
+  assert.equal(client.lastMetrics.workerElapsedMs, 30);
+  assert.equal(client.lastMetrics.frameIntervalMs, undefined);
+  now = 250; client.pullCameraFrame(720, 1280); await reply(290, 28);
+  assert.equal(client.lastMetrics.frameIntervalMs, 245);
+  // Pause with one frame in flight, then resume much later.
+  now = 500; client.pullCameraFrame(720, 1280); client.releaseFrameBuffer(); await reply(545, 30);
+  assert.equal(client.lastMetrics.frameIntervalMs, undefined);
+  now = 90000; client.pullCameraFrame(720, 1280); await reply(90040, 28);
+  assert.equal(client.lastMetrics.frameIntervalMs, undefined);
+  now = 90250; client.pullCameraFrame(720, 1280); await reply(90295, 31);
+  assert.equal(client.lastMetrics.frameIntervalMs, 255);
+  assert.equal(client.lastMetrics.heapBytes, 33554432);
+  client.dispose();
+});
+
+test('square messages carry fewer pixels while diagnostics preserve raw dimensions and fresh reply timings', async () => {
+  let now = 0, listener, request;
+  const settled = [];
+  const fake = { onMessage(fn) { listener = fn; }, terminate() {}, postMessage(message) {
+    if (message.type === 'init') queueMicrotask(() => listener({ id: message.id, type: 'ready' }));
+    else request = message;
+  } };
+  const client = new DecoderClient({ createWorker: () => fake }, () => {}, error => assert.fail(error), () => now);
+  const { FrameCropper } = require('../miniprogram/services/frame-cropper');
+  const prepared = new FrameCropper().prepare({ width: 720, height: 1280, data: new ArrayBuffer(3686400) });
+  await client.start(68);
+  client.pushFrame(prepared.frame, metrics => settled.push(metrics), { ...prepared.metrics, cropMs: 2 });
+  assert.equal(request.frame.data.byteLength, 2073600);
+  assert.deepEqual(Object.keys(request.frame).sort(), ['data', 'height', 'width']);
+  now = 35;
+  listener({ id: request.id, type: 'frame', result: {}, elapsed: 25,
+    metrics: { width: 720, height: 720, inputBytes: 2073600, cropLeft: 0, cropTop: 0, decodeWidth: 720, decodeHeight: 720 } });
+  await tick();
+  assert.equal(settled[0].height, 1280); assert.equal(settled[0].inputBytes, 3686400);
+  assert.equal(settled[0].postBytes, 2073600); assert.equal(settled[0].cropTop, 280);
+  assert.equal(settled[0].cropMs, 2); assert.equal(settled[0].roundTripMs, 35);
+  assert.equal(settled[0].workerElapsedMs, 25);
+  assert.equal(settled[0].cropBufferBytes, 2073600);
+  client.pullCameraFrame(720, 1280, metrics => settled.push(metrics));
+  listener({ id: request.id, type: 'frame', directUnavailable: false }); await tick();
+  assert.equal(settled[1], null, 'empty direct replies must not reuse the last successful timing');
+  client.dispose();
+});

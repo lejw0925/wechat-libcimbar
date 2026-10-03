@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 
 const require = createRequire(import.meta.url);
 const { loadDecoder } = require('../miniprogram/workers/decoder-runtime');
+const { FrameCropper } = require('../miniprogram/services/frame-cropper');
 const bytes = brotliDecompressSync(fs.readFileSync('miniprogram/wasm/cimbar.wasm.br'));
 const runtime = await loadDecoder({ instantiate: (_file, imports) => WebAssembly.instantiate(bytes, imports) });
 const hash = buffer => createHash('sha256').update(buffer).digest('hex');
@@ -48,6 +49,15 @@ if (fs.existsSync(sample)) {
   assert.equal(hash(readResult(square.size)), hash(recovered));
   assert.equal(runtime.frameInfo.decodeBytes, 720 * 720 * 4);
   console.log('PASS: synthetic 720×1280 camera frame cropped to 720×720, exact decoded file hash.');
+  const cropper = new FrameCropper();
+  const copied = cropper.prepare({ width: 720, height: 1280, data: asArrayBuffer(portrait.stdout) });
+  runtime.reset(68);
+  const preCropped = runtime.decode(structuredClone(copied.frame), { square: true });
+  assert.equal(preCropped.complete, true);
+  assert.equal(hash(readResult(preCropped.size)), hash(recovered));
+  assert.equal(copied.metrics.postBytes, 2073600);
+  cropper.release();
+  console.log('PASS: pre-post 720×720 crop survives message cloning and restores the same file hash.');
   for (const filename of ['b/scan2434.jpg', '6bit/4_30_f0_big.jpg', '6bit/4_30_f2_734.jpg', '6bit/4_30_f0_627.jpg']) {
     const source = 'third_party/libcimbar/samples/' + filename;
     const dimensions = spawnSync('ffprobe', ['-v', 'quiet', '-show_entries', 'stream=width,height', '-of', 'json', source], { encoding: 'utf8' });

@@ -1,5 +1,7 @@
 <view class="open-source-footer">
-  <button class="source-link" bindtap="copySource">GitHub 开源 · {{repository}}</button>
-  <button class="star-link" bindtap="recommendStar">☆ 喜欢的话，去 GitHub 点个 Star</button>
-  <view class="source-hint">点击复制链接，在浏览器中打开</view>
+  <view class="source-group">
+    <button class="source-row" bindtap="copySource" hover-class="source-pressed"><text>GitHub 源码</text><text class="source-action">复制链接</text></button>
+    <button class="source-row" bindtap="recommendStar" hover-class="source-pressed"><text>在 GitHub 上支持项目</text><text class="source-action">Star</text></button>
+  </view>
+  <view class="source-hint">{{repository}}</view>
 </view>

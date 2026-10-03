@@ -1,0 +1,38 @@
+<view class="page-background" aria-hidden="true"></view>
+<view class="page">
+  <view class="group-label">接收模式</view>
+  <view class="group mode-group">
+    <view class="row between mode-heading"><text>{{modeLabel}}</text><text class="muted small">与发送端保持一致</text></view>
+    <slider class="mode-slider" min="0" max="4" step="1" value="{{modeIndex}}" activeColor="{{sliderAccent}}" backgroundColor="{{sliderTrack}}" block-color="{{sliderThumb}}" block-size="28" bindchanging="modeChanging" bindchange="modeChange" aria-label="接收模式" />
+    <view class="mode-stops">
+      <button wx:for="{{modes}}" wx:key="value" class="mode-stop {{modeIndex === index ? 'selected' : ''}}" data-index="{{index}}" bindtap="modeTap" hover-class="pressed">{{item.shortLabel}}</button>
+    </view>
+  </view>
+  <view class="group-footer">{{modeDetail}}。返回扫码页后使用新模式，已有进度时会先询问；已完成的文件不受影响。</view>
+
+  <view class="group-label">使用</view>
+  <view class="group">
+    <button class="list-row" bindtap="copySender" hover-class="pressed"><text>复制发送端网址</text><text class="muted small">cimbar.org</text></button>
+    <button class="list-row" bindtap="toggleHelp" hover-class="pressed"><text>使用说明</text><text class="muted small">{{helpOpen ? '收起' : '展开'}}</text></button>
+    <view wx:if="{{helpOpen}}" class="help-text">
+      <view>1. 在另一台设备打开 cimbar.org，选择文件并播放码图。</view>
+      <view>2. 两端使用相同模式，将完整码图放进取景框。</view>
+      <view>3. 接收完成后确认文件名，再保存或导出。</view>
+      <view class="help-note">在扫码页底部上滑查看历史，列表顶部下滑可收起。完全展开后暂停相机，收起后恢复原本正在进行的接收。更换模式会重新接收。</view>
+    </view>
+  </view>
+  <view class="group-footer">文件在本机解码，不上传。普通文件保存在小程序目录；重要文件请导出，清理小程序数据会删除本地文件。</view>
+
+  <block wx:if="{{hasDiagnostics || hasPreviousDiagnostics}}">
+    <view class="group-label">诊断</view>
+    <view class="group">
+      <button wx:if="{{hasDiagnostics}}" class="list-row" bindtap="copyDiagnostics" hover-class="pressed"><text>复制本次接收诊断</text><view class="chevron"></view></button>
+      <button wx:if="{{hasPreviousDiagnostics}}" class="list-row" bindtap="copyPreviousDiagnostics" hover-class="pressed"><text>复制上次接收诊断</text><view class="chevron"></view></button>
+    </view>
+    <view class="group-footer">不含文件内容。异常退出后可复制上次记录排查问题。</view>
+  </block>
+
+  <view class="group-label">开源</view>
+  <view class="group"><button class="list-row" bindtap="licenses" hover-class="pressed"><text>开源许可</text><view class="chevron"></view></button></view>
+  <open-source-footer />
+</view>

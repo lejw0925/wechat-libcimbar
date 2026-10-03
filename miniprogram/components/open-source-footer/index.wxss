@@ -1,6 +1,16 @@
-.open-source-footer { margin-top: 32rpx; padding: 26rpx 0 8rpx; border-top: 1rpx solid #dfe6d9; text-align: center; }
-.source-link, .star-link { margin: 0; padding: 8rpx 0; background: transparent; border: 0; border-radius: 0; font-size: 23rpx; line-height: 1.65; font-weight: 500; }
-.source-link { color: #41664d; word-break: break-all; }
-.star-link { color: #77814d; }
-.source-link::after, .star-link::after { border: 0; }
-.source-hint { margin-top: 8rpx; color: #9ba49c; font-size: 20rpx; line-height: 1.5; }
+.open-source-footer { margin-top: 12px; }
+.source-group { background: #ffffff; border-radius: 16px; overflow: hidden; }
+/* Isolated component: reset native v2 width/margins here as well. */
+.source-row.source-row { box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; padding: 14px 16px; margin: 0; border: 0; border-radius: 0; background: transparent; color: #1c1c1e; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; font-size: 17px; line-height: 24px; font-weight: 400; text-align: left; }
+.source-row::after { border: 0; }
+.source-row + .source-row { border-top: .5px solid rgba(60, 60, 67, .18); }
+.source-action { flex-shrink: 0; color: #007aff; font-size: 13px; }
+.source-hint { padding: 8px 16px; font-size: 13px; line-height: 1.55; color: #6d6d72; word-break: break-all; }
+.source-pressed { opacity: .55; }
+@media (prefers-color-scheme: dark) {
+  .source-group { background: #252831; }
+  .source-row.source-row { color: #f2f2f7; }
+  .source-row + .source-row { border-color: rgba(235, 235, 245, .15); }
+  .source-action { color: #64a9ff; }
+  .source-hint { color: #a4a6b0; }
+}

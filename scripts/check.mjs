@@ -11,14 +11,19 @@ const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry =
 });
 const files = walk('miniprogram');
 for (const file of files) {
-  if (file.endsWith('.js')) new vm.Script(fs.readFileSync(file, 'utf8'), { filename: file });
+  if (file.endsWith('.js') || file.endsWith('.wxs')) new vm.Script(fs.readFileSync(file, 'utf8'), { filename: file });
   if (file.endsWith('.json')) JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 const app = JSON.parse(fs.readFileSync('miniprogram/app.json'));
 for (const page of app.pages) for (const extension of ['js', 'json', 'wxml', 'wxss']) {
   assert.ok(fs.existsSync(`miniprogram/${page}.${extension}`), `Missing ${page}.${extension}`);
 }
-for (const component of Object.values(app.usingComponents || {})) {
+const components = new Set(Object.values(app.usingComponents || {}));
+for (const page of app.pages) {
+  const config = JSON.parse(fs.readFileSync(`miniprogram/${page}.json`));
+  for (const component of Object.values(config.usingComponents || {})) components.add(component);
+}
+for (const component of components) {
   const base = 'miniprogram/' + component.replace(/^\//, '');
   for (const extension of ['js', 'json', 'wxml', 'wxss']) assert.ok(fs.existsSync(`${base}.${extension}`));
   assert.equal(JSON.parse(fs.readFileSync(base + '.json')).component, true);

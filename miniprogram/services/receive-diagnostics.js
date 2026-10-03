@@ -1,8 +1,9 @@
 const STORAGE_KEY = 'cimbar-receive-diagnostics';
-const REVISION = 'square-speed-3';
+const PREVIOUS_STORAGE_KEY = 'cimbar-previous-receive-diagnostics';
+const REVISION = 'adaptive-sampling-9';
 
-// One small local snapshot, not a frame log. Never store pixels, file contents,
-// or filenames. It survives an OS kill so a device report remains useful.
+// At most two small snapshots, never pixels, file contents or filenames.
+// Keep the previous run because the scanner now starts automatically on launch.
 class ReceiveDiagnostics {
   constructor(api) {
     this.api = api;
@@ -10,9 +11,17 @@ class ReceiveDiagnostics {
       const stored = api.getStorageSync(STORAGE_KEY);
       this.data = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : null;
     } catch (_) { this.data = null; }
+    try {
+      const previous = api.getStorageSync(PREVIOUS_STORAGE_KEY);
+      this.previous = previous && typeof previous === 'object' && !Array.isArray(previous) ? previous : null;
+    } catch (_) { this.previous = null; }
     this.savedAt = 0;
   }
   begin(mode) {
+    if (this.data) {
+      this.previous = this.data;
+      try { this.api.setStorageSync(PREVIOUS_STORAGE_KEY, this.previous); } catch (_) {}
+    }
     let device = {}, app = {};
     try { device = this.api.getDeviceInfo ? this.api.getDeviceInfo() : this.api.getSystemInfoSync(); } catch (_) {}
     try { app = this.api.getAppBaseInfo ? this.api.getAppBaseInfo() : {}; } catch (_) {}
@@ -31,4 +40,4 @@ class ReceiveDiagnostics {
     try { this.api.setStorageSync(STORAGE_KEY, this.data); } catch (_) { /* Diagnostics must never block receiving. */ }
   }
 }
-module.exports = { ReceiveDiagnostics, STORAGE_KEY };
+module.exports = { ReceiveDiagnostics, STORAGE_KEY, PREVIOUS_STORAGE_KEY };

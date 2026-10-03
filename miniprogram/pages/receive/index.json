@@ -1,1 +1,7 @@
-{ "navigationBarTitleText": "CIMBAR · 接收" }
+{
+  "navigationBarTitleText": "扫码",
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "@navigationText",
+  "backgroundColor": "@background",
+  "usingComponents": { "history-sheet": "/components/history-sheet/index" }
+}

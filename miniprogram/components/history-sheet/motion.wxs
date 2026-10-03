@@ -1,0 +1,207 @@
+// Runs in WeChat's view layer. Finger moves never send setData or camera data.
+var SNAP_MS = 240;
+var clamp = function(value, min, max) { return Math.max(min, Math.min(max, value)); };
+var cancelSettlement = function(owner, state) {
+  state.settleVersion = (state.settleVersion || 0) + 1;
+  if (state.settleTimer) owner.clearTimeout(state.settleTimer);
+  state.settleTimer = 0;
+};
+var paint = function(owner, state, animate) {
+  var range = Math.max(1, state.options.height - state.options.peek);
+  var progress = 1 - state.offset / range;
+  var transition = animate ? SNAP_MS + 'ms cubic-bezier(.22,.8,.2,1)' : 'none';
+  var panel = owner.selectComponent('.history-panel');
+  var body = owner.selectComponent('.history-body');
+  var fade = owner.selectComponent('.history-peek-fade');
+  var dim = owner.selectComponent('.history-dim');
+  if (panel) panel.setStyle({ transform: 'translate3d(0,' + state.offset + 'px,0)', transition: animate ? 'transform ' + transition : 'none' });
+  if (body) body.setStyle({ opacity: 0.55 + 0.45 * progress, transition: animate ? 'opacity ' + transition : 'none' });
+  if (fade) fade.setStyle({ opacity: 1 - progress, transition: animate ? 'opacity ' + transition : 'none' });
+  if (dim) dim.setStyle({ opacity: progress, transition: animate ? 'opacity ' + transition : 'none' });
+};
+var finish = function(owner, expanded, animate) {
+  var state = owner.getState();
+  cancelSettlement(owner, state);
+  state.down = false;
+  state.offset = expanded ? 0 : Math.max(0, state.options.height - state.options.peek);
+  state.targetExpanded = expanded;
+  paint(owner, state, animate);
+  var version = state.settleVersion;
+  var settled = function() {
+    if (state.settleVersion !== version || state.down) return;
+    state.settleTimer = 0;
+    state.options.expanded = expanded;
+    owner.callMethod('settled', { expanded: expanded });
+  };
+  // Camera mount/unmount belongs after the snap, including closing. Keep this
+  // timer in the view layer and cancel it when another gesture takes over.
+  if (animate) state.settleTimer = owner.setTimeout(settled, SNAP_MS + 32);
+  else settled();
+};
+var sync = function(value, old, owner) {
+  var state = owner.getState();
+  // WXS prop observers can fire for unchanged values during unrelated renders.
+  if (state.options && value.height === state.options.height && value.peek === state.options.peek &&
+      value.disabled === state.options.disabled && value.expanded === state.options.expanded && value.version === state.options.version) return;
+  var interrupted = (state.down && state.moved) || state.settleTimer;
+  cancelSettlement(owner, state);
+  state.options = { height: value.height, peek: value.peek, disabled: value.disabled, expanded: value.expanded, version: value.version };
+  state.targetExpanded = value.expanded;
+  state.down = false;
+  state.offset = value.expanded ? 0 : Math.max(0, value.height - value.peek);
+  paint(owner, state, false);
+  if (interrupted) owner.callMethod('settled', { expanded: value.expanded });
+};
+var start = function(event, owner) {
+  var state = owner.getState();
+  if (!state.options || (state.options.disabled && !state.options.expanded) || event.touches.length !== 1) return false;
+  cancelSettlement(owner, state);
+  var point = event.touches[0];
+  // A second drag can interrupt the snap animation. Start at the visible
+  // position, not the previous animation's destination, to avoid a jump.
+  var panel = owner.selectComponent('.history-panel');
+  var dim = owner.selectComponent('.history-dim');
+  if (panel && dim && panel.getBoundingClientRect && dim.getBoundingClientRect) {
+    var panelRect = panel.getBoundingClientRect();
+    var windowRect = dim.getBoundingClientRect();
+    state.offset = clamp(panelRect.top - (windowRect.height - state.options.height),
+      0, Math.max(0, state.options.height - state.options.peek));
+    paint(owner, state, false);
+  }
+  state.down = true;
+  state.moved = false;
+  state.suppressTap = false;
+  state.identifier = point.identifier;
+  state.startY = point.clientY;
+  state.lastY = point.clientY;
+  state.lastTime = event.timeStamp;
+  state.velocity = 0;
+  state.origin = state.offset;
+  state.wasExpanded = state.targetExpanded;
+  return false;
+};
+var move = function(event, owner) {
+  var state = owner.getState();
+  if (!state.down) return false;
+  if (event.touches.length !== 1 || event.touches[0].identifier !== state.identifier) {
+    state.suppressTap = true;
+    finish(owner, state.wasExpanded, true);
+    return false;
+  }
+  var y = event.touches[0].clientY;
+  var delta = y - state.startY;
+  if (!state.moved && Math.abs(delta) < 6) return false;
+  if (!state.moved) {
+    state.moved = true;
+    state.suppressTap = true;
+    owner.callMethod('dragStarted', {});
+  }
+  state.velocity = (y - state.lastY) / Math.max(1, event.timeStamp - state.lastTime);
+  state.lastY = y;
+  state.lastTime = event.timeStamp;
+  state.offset = clamp(state.origin + delta, 0, Math.max(0, state.options.height - state.options.peek));
+  paint(owner, state, false);
+  return false;
+};
+var end = function(event, owner) {
+  var state = owner.getState();
+  if (!state.down) return false;
+  state.down = false;
+  if (!state.moved) return false; // A tap is handled by tap(), including accessibility activation.
+  var velocity = event.timeStamp - state.lastTime > 120 ? 0 : state.velocity;
+  var range = Math.max(0, state.options.height - state.options.peek);
+  var expanded = Math.abs(velocity) > 0.35 ? velocity < 0 : state.offset < range * 0.55;
+  finish(owner, expanded, true);
+  return false;
+};
+var cancel = function(event, owner) {
+  var state = owner.getState();
+  if (state.down) {
+    state.suppressTap = true;
+    finish(owner, state.wasExpanded, true);
+  }
+  return false;
+};
+var tap = function(event, owner) {
+  var state = owner.getState();
+  if (!state.options || state.suppressTap || (state.options.disabled && !state.options.expanded)) return false;
+  if (!state.targetExpanded) owner.callMethod('dragStarted', {});
+  finish(owner, !state.targetExpanded, true);
+  return false;
+};
+var scrolled = function(event, owner) {
+  owner.getState().scrollTop = Math.max(0, event.detail.scrollTop || 0);
+};
+var bodyStart = function(event, owner) {
+  var state = owner.getState();
+  if (!state.options || !state.options.expanded) return false;
+  if (event.touches.length !== 1) {
+    if (state.down) cancel(event, owner);
+    state.bodyMode = '';
+    return false;
+  }
+  var wasSettling = !!state.settleTimer;
+  start(event, owner);
+  state.bodyMode = 'pending';
+  state.bodyWasSettling = wasSettling;
+  state.bodyScrolling = false;
+  state.bodyLastY = state.startY;
+  state.bodyLastTime = event.timeStamp;
+  // Let native list scrolling begin. Only a downward pull at its top is ours.
+  return true;
+};
+var bodyMove = function(event, owner) {
+  var state = owner.getState();
+  if (state.bodyMode === 'sheet') return move(event, owner);
+  if (!state.down) return true;
+  if (event.touches.length !== 1 || event.touches[0].identifier !== state.identifier) return cancel(event, owner);
+  var y = event.touches[0].clientY;
+  var previousY = state.bodyLastY;
+  var previousTime = state.bodyLastTime;
+  state.bodyLastY = y;
+  state.bodyLastTime = event.timeStamp;
+  var delta = y - state.startY;
+  if (Math.abs(delta) < 6 && !state.bodyScrolling) return true;
+  var downward = state.bodyScrolling ? y > previousY : delta > 0;
+  if ((state.scrollTop || 0) > 1 || !downward) {
+    state.bodyScrolling = true;
+    state.suppressTap = true;
+    return true;
+  }
+  state.bodyMode = 'sheet';
+  if (state.bodyScrolling) {
+    // The list reached its top during this same gesture. Use just the new
+    // finger movement so the drawer does not jump by the list's scroll distance.
+    state.startY = previousY;
+    state.lastY = previousY;
+    state.lastTime = previousTime;
+    state.origin = state.offset;
+  }
+  return move(event, owner);
+};
+var bodyEnd = function(event, owner) {
+  var state = owner.getState();
+  if (!state.down) return true;
+  if (state.bodyMode === 'sheet') return end(event, owner);
+  state.down = false;
+  if (state.bodyWasSettling) finish(owner, state.targetExpanded, true);
+  return true;
+};
+var bodyCancel = function(event, owner) {
+  var state = owner.getState();
+  if (!state.down) return true;
+  if (state.bodyMode === 'sheet') return cancel(event, owner);
+  state.down = false;
+  if (state.bodyWasSettling) finish(owner, state.targetExpanded, true);
+  return true;
+};
+var fileTap = function(event, owner) {
+  var state = owner.getState();
+  if (!state.options || !state.options.expanded || state.down || state.suppressTap) return false;
+  owner.callMethod('fileTap', { id: event.currentTarget.dataset.id });
+  return false;
+};
+var block = function() { return false; };
+module.exports = { sync: sync, start: start, move: move, end: end, cancel: cancel, tap: tap,
+  scrolled: scrolled, bodyStart: bodyStart, bodyMove: bodyMove, bodyEnd: bodyEnd, bodyCancel: bodyCancel,
+  fileTap: fileTap, block: block };
