@@ -1,0 +1,24 @@
+page { background: #f6f7f3; color: #192e2b; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; font-size: 28rpx; }
+view, text, button, input { box-sizing: border-box; }
+button::after { border: 0; }
+button { margin: 0; }
+.page { padding: 32rpx 36rpx calc(36rpx + env(safe-area-inset-bottom)); max-width: 1000rpx; margin: 0 auto; }
+.row { display: flex; align-items: center; gap: 16rpx; }
+.between { justify-content: space-between; }
+.muted { color: #77817b; }
+.small { font-size: 23rpx; }
+.eyebrow { font-size: 19rpx; letter-spacing: 3rpx; font-weight: 600; color: #798c82; }
+.section-title { font-size: 30rpx; font-weight: 600; }
+.button { width: 100%; border-radius: 20rpx; padding: 26rpx 28rpx; line-height: 1.45; font-size: 29rpx; font-weight: 600; }
+.primary { background: #164d42; color: #fff; }
+.primary[disabled] { background: #b5c8bf; color: #fff; }
+.secondary { background: #e5ebe4; color: #244c41; }
+.text-button { color: #426758; background: transparent; font-weight: 400; }
+.button-row { display: flex; gap: 20rpx; }
+.button-row .button { flex: 1; width: auto; }
+.actions { display: flex; flex-direction: column; gap: 18rpx; margin-top: 26rpx; }
+.note { padding: 24rpx; background: #f0f3ec; border-radius: 16rpx; color: #6e7d72; font-size: 24rpx; line-height: 1.85; margin-top: 30rpx; }
+.error-card { margin-top: 24rpx; padding: 24rpx; background: #fff0e8; color: #a04e2b; font-size: 25rpx; line-height: 1.65; border-radius: 16rpx; }
+.progress-track { overflow: hidden; height: 8rpx; background: #e6ece5; border-radius: 10rpx; margin: 24rpx 0; }
+.progress-fill { height: 100%; background: #8cb46b; border-radius: 10rpx; transition: width .25s ease; }
+.footnote { text-align: center; color: #9ba49c; font-size: 21rpx; letter-spacing: 1rpx; padding-top: 42rpx; }

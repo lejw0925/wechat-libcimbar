@@ -1,0 +1,16 @@
+{
+  "name": "wechat-cimbar-decoder",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MPL-2.0",
+  "repository": { "type": "git", "url": "https://github.com/lejw0925/wechat-libcimbar.git" },
+  "description": "Offline cimbar receiver for WeChat Mini Programs",
+  "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "test": "node --test tests/*.test.cjs",
+    "check": "node scripts/check.mjs",
+    "test:wasm": "node scripts/test-wasm.mjs",
+    "test:memory": "node scripts/test-memory.mjs"
+  },
+  "engines": { "node": ">=22.15" }
+}

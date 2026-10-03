@@ -1,0 +1,45 @@
+<view class="page">
+  <view class="topline"><view class="brand"><view class="brand-mark"><view></view><view></view><view></view><view></view></view><text>CIMBAR</text></view><view class="local-badge"><view class="dot"></view>本机解码</view></view>
+  <view class="hero"><text class="eyebrow">CAMERA FILE RECEIVER</text><view class="headline">{{status}}</view><view class="subtitle">{{hint}}</view></view>
+
+  <view wx:if="{{phase === 'idle' || phase === 'loading' || phase === 'scanning' || phase === 'paused' || phase === 'error'}}" class="scanner-card">
+    <view class="viewfinder">
+      <camera wx:if="{{cameraVisible}}" class="camera" mode="normal" device-position="back" flash="off" frame-size="large" resolution="high" bindinitdone="cameraReady" binderror="cameraError" bindstop="cameraStopped"></camera>
+      <view wx:else class="finder-placeholder"><view class="optical-mark"><view></view><view></view><view></view><view></view><view></view><view></view><view></view><view></view><view></view></view><text>{{phase === 'loading' ? '正在加载解码器…' : phase === 'paused' ? '镜头已暂停' : '准备接收'}}</text></view>
+      <cover-view class="corner tl"></cover-view><cover-view class="corner tr"></cover-view><cover-view class="corner bl"></cover-view><cover-view class="corner br"></cover-view>
+    </view>
+    <view class="scanner-footer">
+      <view class="row between"><text class="label">{{progress > 0 ? '文件接收进度' : '等待有效画面'}}</text><text class="progress-number">{{progress}}<text class="percent">%</text></text></view>
+      <view class="progress-track"><view class="progress-fill" style="width: {{progress}}%;"></view></view>
+      <view class="row between transfer-stats"><text class="muted small">有效接收速度</text><text class="speed-value">{{phase === 'paused' ? '已暂停' : speedLabel}}</text></view>
+      <view class="row between muted small"><text>{{sizeLabel ? '压缩数据 ' + sizeLabel : '无需联网 · 无需配对'}}</text><text>{{frames}} 帧已处理</text></view>
+      <view class="frame-info muted small">{{cameraSizeLabel ? '相机 ' + cameraSizeLabel : '已请求最高帧尺寸'}} · {{decodeSizeLabel ? '解码 ' + decodeSizeLabel : '居中正方形解码'}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{phase === 'writing'}}" class="result-card"><view class="success-mark">✓</view><view class="section-title">文件已还原</view><text class="muted">正在写入本机 {{writeProgress}}%</text><view class="progress-track"><view class="progress-fill" style="width: {{writeProgress}}%;"></view></view></view>
+
+  <view wx:if="{{phase === 'rename'}}" class="result-card rename-card"><view class="success-mark">✓</view><view class="row between"><text class="section-title">接收完成</text><text class="local-badge">{{sizeLabel}}</text></view><view class="field-label">文件名</view><input class="name-input" value="{{filename}}" maxlength="180" bindinput="nameChange" placeholder="例如：我的文件.pdf" confirm-type="done" bindconfirm="save"/><view class="muted small original-name">原始名称：{{originalName}}</view><view class="note">确认名称后保存在本机。未完成命名的文件也可在“已接收文件”中找回。</view></view>
+
+  <view wx:if="{{phase === 'saved'}}" class="result-card"><view class="success-mark">✓</view><view class="saved-name">{{savedName}}</view><view class="muted">{{sizeLabel}} · 本地文件</view><view class="note">手机上的普通文件保存在小程序专属目录。需要在其他应用使用时，可从下方导出；清理小程序数据会删除本地文件。</view></view>
+
+  <view wx:if="{{error}}" class="error-card">{{error}}</view>
+  <view class="actions">
+    <button wx:if="{{phase === 'idle' || (phase === 'error' && !canRetrySave)}}" class="button primary" bindtap="start">开始接收 <text class="arrow">↗</text></button>
+    <button wx:if="{{phase === 'loading' || phase === 'writing'}}" class="button primary" loading disabled>{{phase === 'loading' ? '准备中' : '正在写入文件'}}</button>
+    <button wx:if="{{phase === 'scanning'}}" class="button primary" bindtap="pause">暂停接收</button>
+    <view wx:if="{{phase === 'paused'}}" class="button-row"><button class="button secondary" bindtap="restart">重新开始</button><button class="button primary" bindtap="resume">继续接收</button></view>
+    <button wx:if="{{phase === 'error' && canRetrySave}}" class="button primary" bindtap="persistResult">重试保存</button>
+    <button wx:if="{{cameraDenied}}" class="button secondary" bindtap="openSettings">打开权限设置</button>
+    <button wx:if="{{phase === 'rename'}}" class="button primary" loading="{{saving}}" disabled="{{saving}}" bindtap="save">确认名称并保存</button>
+    <view wx:if="{{phase === 'saved'}}" class="button-row"><button class="button secondary" bindtap="openSaved">打开文件</button><button class="button primary" bindtap="exportSaved">导出 / 转发</button></view>
+    <button wx:if="{{phase === 'saved'}}" class="button text-button" bindtap="receiveNext">接收下一个文件</button>
+  </view>
+
+  <view wx:if="{{phase === 'idle' || phase === 'error'}}" class="mode-row"><text class="muted">接收模式</text><picker mode="selector" range="{{modes}}" range-key="label" value="{{modeIndex}}" bindchange="modeChange"><view class="mode-value">{{modeLabel}} <text class="muted">⌄</text></view></picker></view>
+  <view class="library-link" bindtap="openFiles"><view><view class="section-title">已接收文件</view><view class="muted small">{{pendingCount > 0 ? pendingCount + ' 个文件待命名' : '查看、重命名或导出本地文件'}}</view></view><text class="link-arrow">↗</text></view>
+  <view class="howto" wx:if="{{phase === 'idle'}}"><view class="eyebrow">如何接收</view><view class="instruction"><text class="step">01</text><text>在另一台设备打开 cimbar.org 并选择文件。</text></view><view class="instruction"><text class="step">02</text><text>保持两端模式一致，将镜头对准完整码图。</text></view><view class="instruction"><text class="step">03</text><text>接收完成后命名，文件即保存在本机。</text></view><button class="copy-link" bindtap="copySender">复制发送端网址 ↗</button></view>
+  <view class="footnote">光学传输 · 仅接收端 · 文件内容不上传</view>
+  <button wx:if="{{hasDiagnostics}}" class="copy-link" bindtap="copyDiagnostics">复制接收诊断（不含文件内容）</button>
+  <open-source-footer />
+</view>

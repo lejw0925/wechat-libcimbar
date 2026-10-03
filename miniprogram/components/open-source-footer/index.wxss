@@ -1,0 +1,6 @@
+.open-source-footer { margin-top: 32rpx; padding: 26rpx 0 8rpx; border-top: 1rpx solid #dfe6d9; text-align: center; }
+.source-link, .star-link { margin: 0; padding: 8rpx 0; background: transparent; border: 0; border-radius: 0; font-size: 23rpx; line-height: 1.65; font-weight: 500; }
+.source-link { color: #41664d; word-break: break-all; }
+.star-link { color: #77814d; }
+.source-link::after, .star-link::after { border: 0; }
+.source-hint { margin-top: 8rpx; color: #9ba49c; font-size: 20rpx; line-height: 1.5; }

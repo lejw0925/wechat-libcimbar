@@ -1,0 +1,15 @@
+{
+  "pages": ["pages/receive/index", "pages/files/index", "pages/licenses/index"],
+  "usingComponents": { "open-source-footer": "/components/open-source-footer/index" },
+  "window": {
+    "navigationBarTitleText": "CIMBAR · 文件接收",
+    "navigationBarBackgroundColor": "#f6f7f3",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6f7f3"
+  },
+  "workers": "workers",
+  "permission": { "scope.camera": { "desc": "用于读取屏幕上的 cimbar 码并在本机还原文件" } },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}
