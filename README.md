@@ -14,11 +14,11 @@
 
 iPhone 实测：发送端 cimbar.org、B·标准模式，有效接收速度 86.4 KiB/s，3.4 MiB 文件多次完整接收并保存。
 
-## 微信体验版
+## 扫码使用
 
-微信扫一扫体验（体验版仅对已加入的体验成员开放）：
+小程序已正式上线，微信扫一扫即可使用：
 
-<img src="docs/images/miniprogram-code.png" width="165" alt="体验版微信小程序码">
+<img src="docs/images/miniprogram-code.png" width="165" alt="微信小程序码">
 
 ## 直接运行
 
@@ -94,8 +94,8 @@ npm run test:wasm
 
 桌面已验证：真实 WASM 加载与官方 Mode B 样本还原（7,538 字节）；官方样本合成的 720×1280 相机帧裁剪后完整恢复；上游四张真实拍摄 JPG 均成功定位解码；五种模式 60,000 字节往返测试（丢帧、乱序、重复）SHA-256 与原始数据一致；1 MiB 难压缩数据长时间测试 WASM 堆保持 32 MiB；97 项 Node 测试与 18 组浏览器布局检查通过。
 
-真机：iPhone 已多次完整接收 3.4 MiB 文件（含命名、保存与历史记录，见上方截图）。Android 真机验收仍待进行，双端步骤见 [docs/device-testing.md](docs/device-testing.md)。本机微信开发者工具的自动化服务端口未开启，小程序尚未上传或发布。
+真机：iPhone 已多次完整接收 3.4 MiB 文件（有效速度 86.4 KiB/s，含命名、保存与历史记录，见上方截图）；Android 已实测可正确接收文件，速率约 50 KB/s。原生鸿蒙（HarmonyOS NEXT）尚未测试。双端验收步骤见 [docs/device-testing.md](docs/device-testing.md)。小程序已正式上线。
 
 ## 开源许可
 
-本项目自有源码采用 [Mozilla Public License 2.0](LICENSE)。第三方组件保留各自的许可及版权声明，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 和随包许可全文；编译产物的对应源码、固定依赖版本与重建脚本均可从本仓库获取。GitHub 源码发布不代表微信小程序已上传、审核或正式发布。
+本项目自有源码采用 [Mozilla Public License 2.0](LICENSE)。第三方组件保留各自的许可及版权声明，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 和随包许可全文；编译产物的对应源码、固定依赖版本与重建脚本均可从本仓库获取。

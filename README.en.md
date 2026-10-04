@@ -14,11 +14,11 @@ The decoding core is a real libcimbar build compiled to WASM and shipped in the 
 
 Measured on iPhone: sender on cimbar.org, Mode B (standard), effective receive throughput 86.4 KiB/s, with a 3.4 MiB file fully received and saved multiple times.
 
-## Try it in WeChat (trial version)
+## Use it in WeChat
 
-Scan with WeChat (trial version, open to registered trial members only):
+The mini program is officially released — scan with WeChat to use it:
 
-<img src="docs/images/miniprogram-code.png" width="165" alt="WeChat mini program trial code">
+<img src="docs/images/miniprogram-code.png" width="165" alt="WeChat mini program code">
 
 ## Run it yourself
 
@@ -94,8 +94,8 @@ npm run test:wasm
 
 Verified on desktop: real WASM load with the official Mode B sample restored (7,538 bytes); a synthetic 720×1280 camera frame built from the official sample fully recovered after cropping; all four upstream real-camera JPGs located and decoded; five-mode round trips over 60,000 bytes (frame loss, reordering, duplication) with SHA-256 matching the original; long 1 MiB hard-to-compress runs with the WASM heap stable at 32 MiB; 97 Node tests and 18 browser layout checks passing.
 
-On real devices: iPhone has fully received a 3.4 MiB file multiple times (including naming, saving and history — see the screenshots above). Android real-device acceptance is still pending; see [docs/device-testing.md](docs/device-testing.md) for the two-platform checklist. The local WeChat DevTools automation service port is not enabled, and the mini program has not been uploaded or released.
+On real devices: iPhone has fully received 3.4 MiB files multiple times at 86.4 KiB/s effective throughput (naming, saving and history included — see the screenshots above), and Android receives files correctly at about 50 KB/s. Native HarmonyOS (HarmonyOS NEXT) has not been tested yet. The two-platform checklist lives in [docs/device-testing.md](docs/device-testing.md). The mini program is officially released on WeChat.
 
 ## License
 
-This project's own source code is licensed under the [Mozilla Public License 2.0](LICENSE). Third-party components keep their own licenses and copyright notices; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the bundled license texts. The corresponding source of the compiled artifacts, pinned dependency versions and rebuild scripts are all available from this repository. Publishing the source on GitHub does not mean the WeChat mini program has been uploaded, reviewed or formally released.
+This project's own source code is licensed under the [Mozilla Public License 2.0](LICENSE). Third-party components keep their own licenses and copyright notices; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the bundled license texts. The corresponding source of the compiled artifacts, pinned dependency versions and rebuild scripts are all available from this repository.
